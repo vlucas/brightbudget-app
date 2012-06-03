@@ -1,9 +1,10 @@
 
 // Require Titanium Nitride (TiN)
-var tin = require('/tin/lib');
+//var tin = require('/tin/lib');
+var api = require('/tin/api');
 
 // Master background color
-Ti.UI.setBackgroundColor('#000');
+Ti.UI.setBackgroundColor('#fff');
 
 // Start API App at API root 
-tin.api.App('http://localhost/brightb.it/budgetapp/').open();
+api.app('http://localhost/brightb.it/budgetapp/').open();

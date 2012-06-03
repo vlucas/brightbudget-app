@@ -3,14 +3,25 @@ var ns = {};
 var cfg = {};
 var _ = require('/lib/underscore');
 
+// Font
+cfg.font = {
+  fontFamily : "Helvetica Neue",
+  fontWeight : 'normal'
+};
+
 // UI config
 cfg.ui = {
-  Window: {
-    backgroundColor: '#000'
+  Window: {},
+  Button: {},
+  Label:{
+    font: _.extend(cfg.font, {})
   },
-  Button: {
-    color: '#222',
-    backgroundColor: '#000'
+  LabelH1: {
+    color: '#111',
+    font: _.extend(cfg.font, {fontSize: 22, fontWeight: 'bold'}),
+  },
+  LabelH2: {
+    font: _.extend(cfg.font, {fontSize: 18, fontWeight: 'bold'})
   }
 };
 
@@ -42,6 +53,8 @@ ns.extend = function(/* key, obj */) {
   var cfgEl = ns.get(args.shift(), {});
   // Place returned value back at beginning of args array
   args.unshift(cfgEl);
+  // Provide 'font' for defined base font
+  args.unshift({font: ns.get('font', {})});
   // Extend 'get' result with the remainder of objects passed in
   return _.extend.apply(this, args);
 };

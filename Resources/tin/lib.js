@@ -1,7 +1,7 @@
 // All TiN functionality is namespaced here
 var ns = {};
 var cfg = require('/tin/config');
-ns.ui = require('/tin/ui');
+var _ = require('/lib/underscore');
 
 // Application variables held in namespace
 ns._vars = {};
@@ -13,14 +13,7 @@ ns.log = function(msg) {
 
 // Extend a given object with all the properties in passed-in object(s).
 // Thanks Underscore.js
-ns.extend = function(obj) {
-  each(slice.call(arguments, 1), function(source) {
-    for (var prop in source) {
-      obj[prop] = source[prop];
-    }
-  });
-  return obj;
-};
+ns.extend = _.extend;
 
 // Platform detection helpers
 ns.osname = Ti.Platform.osname;

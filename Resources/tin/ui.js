@@ -2,6 +2,7 @@
  * UI Elements
  */
 var ns = {};
+var tin = require('/tin/lib');
 var cfg = require('/tin/config');
 
 // Window creation helper due to shitty JSS support for iPhone 
@@ -24,11 +25,30 @@ ns.Window = function(_props) {
   return win;
 };
 
+// View object
+ns.View = function(_props) {
+  return Ti.UI.createButton(cfg.extend('ui.View', _props));
+};
+
+// Table object
+ns.Table = function(_props) {
+  return Ti.UI.createTableView(cfg.extend('ui.Table', _props));
+};
+
+// Table object
+ns.TableGroup = function(_props) {
+  var tbl = Ti.UI.createTableView(cfg.extend('ui.TableGroup', _props));
+  if(tin.isiOS()) {
+    tbl.style = Ti.UI.iPhone.TableViewStyle.GROUPED;
+  }
+  return tbl;
+};
+
 // Button with a localized title
 ns.Button = function() {
   if (typeof arguments[0] === 'string') {
     return Ti.UI.createButton(cfg.extend('ui.Button', {
-      title:L(arguments[0], arguments[0])
+      title: L(arguments[0], arguments[0])
     },arguments[1]||{}));
   } else {
     return Ti.UI.createButton(cfg.extend('ui.Button', arguments[0]));
@@ -38,9 +58,9 @@ ns.Button = function() {
 // Image with more intelligent defaults
 ns.ImageView = function(img,args) {
   return Ti.UI.createImageView(cfg.extend('ui.ImageView', {
-    image:img,
-    height:'auto',
-    width:'auto'
+    image: img,
+    height: 'auto',
+    width: 'auto'
   }, args||{}));
 };
 
@@ -76,6 +96,59 @@ ns.MessageView = function(msg) {
   });
   viewMsg.add(lblMsg);
   return viewMsg;
+};
+
+// Label helper
+ns.Label = function() {
+  if (typeof arguments[0] === 'string') {
+    var o = cfg.extend('ui.Label', {
+      text: L(arguments[0], arguments[0])
+    }, arguments[1] || {});
+  } else {
+    var o = cfg.extend('ui.Label', arguments[0]);
+  }
+  return Ti.UI.createLabel(o);
+};
+// Label helper H1
+ns.LabelH1 = function(text, _props) {
+  var lbl = ns.Label.apply(this, arguments);
+  return tin.extend(lbl, cfg.extend('ui.LabelH1', _props));
+};
+// Label helper H2
+ns.LabelH2 = function(text, _props) {
+  var lbl = ns.Label.apply(this, arguments);
+  return tin.extend(lbl, cfg.extend('ui.LabelH2', _props));
+};
+// Label helper small
+ns.LabelSmall = function(text, _props) {
+  var lbl = ns.Label.apply(this, arguments);
+  return tin.extend(lbl, cfg.extend('ui.LabelSmall', _props));
+};
+
+// WebView helper
+ns.WebView = function(_props) {
+  // Merge with default props
+  var o = cfg.extend('ui.WebView', _props);
+  var webView = Ti.UI.createWebView(o);
+
+  if(tin.isiOS()) {
+
+  }
+  
+  // Inject CSS file if specified
+  // @link http://stackoverflow.com/questions/6920081/css-injection-in-uiwebview
+  if(o.cssFile) {
+    webView.addEventListener('load', function () {
+      // Read the css content from styles.css
+      var cssContent = Ti.Filesystem.getFile(Ti.Filesystem.resourcesDirectory + o.cssFile);
+      var cssContentString = JSON.stringify(String(cssContent.read()));
+
+      // Create the style element with the css content to inject
+      webView.evalJS("var s = document.createElement('style'); s.setAttribute('type', 'text/css'); s.innerHTML = " + cssContentString + "; document.getElementsByTagName('head')[0].appendChild(s);");
+    });
+  }
+
+  return webView;
 };
 
 // ===============================================
