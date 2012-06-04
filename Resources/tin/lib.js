@@ -129,34 +129,55 @@ ns.ajax = function(_props) {
   }
 };
 
-// Helper functions in global scope for object positioning
-var _displayCaps = Ti.Platform.displayCaps;
-
-// Pixel width assuming 320px dimension
-ns.x = function(p) {
-  var size = p;
-  var xe = 320;
-  var xp = _displayCaps.platformWidth;
-  if(ns.isAndroid() || xe != xp) {
-  	var pct = (p/xe); // percentage of 320 width
-  	return Math.floor(xp * pct);
+// Truncate string to specified character length
+ns.truncate = function(_str, _length) {
+  var length = _length || '50';
+  var etc = '...';
+  var str = (_str + '');
+  if(str.length > length + etc.length) {
+    return str.substring(0, length) + etc;
+  } else {
+    return str;
   }
-  //Ti.API.info('X size ' + p + ' to ' + size);
-  return size;
-}
+};
 
-// Pixel height assuming 480px dimension
-ns.y = function(p) {
-  var size = p;
-  var ye = 480;
-  var yp = _displayCaps.platformHeight;
-  if(ns.isAndroid() || ye != yp) {
-  	var pct = (p/ye); // percentage of 480 height
-  	size = Math.floor(yp * pct);
+// Uppercase the first character of every word in a string
+ns.ucwords = function(str) {
+  return (str + '').toLowerCase().replace(/_/g, ' ').replace(/^([a-z])|\s+([a-z])/g, function ($1) {
+    return $1.toUpperCase();
+  });
+};
+
+// Returns the number rounded to specified precision
+// @link http://phpjs.org/functions/round
+ns.round = function(value, precision, mode) {
+  var m, f, isHalf, sgn; // helper variables
+  precision |= 0; // making sure precision is integer
+  m = Math.pow(10, precision);
+  value *= m;
+  sgn = (value > 0) | -(value < 0); // sign of the number
+  isHalf = value % 1 === 0.5 * sgn;
+  f = Math.floor(value);
+ 
+  if (isHalf) {
+    switch (mode) {
+    case 'ROUND_HALF_DOWN':
+      value = f + (sgn < 0); // rounds .5 toward zero
+      break;
+    case 'ROUND_HALF_EVEN':
+      value = f + (f % 2 * sgn); // rouds .5 towards the next even integer
+      break;
+    case 'ROUND_HALF_ODD':
+      value = f + !(f % 2); // rounds .5 towards the next odd integer
+      break;
+    default:
+      value = f + (sgn > 0); // rounds .5 away from zero
+    }
   }
-  //Ti.API.info('Y size ' + p + ' to ' + size);
-  return size;
-}
+ 
+  return (isHalf ? value : Math.round(value)) / m;
+};
+
 
 // Export all the things! *\('o')|
 for(prop in ns) {

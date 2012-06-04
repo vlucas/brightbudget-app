@@ -5,7 +5,46 @@ var ns = {};
 var tin = require('/tin/lib');
 var cfg = require('/tin/config');
 
-// Window creation helper due to shitty JSS support for iPhone 
+// Helper functions for object positioning
+var _displayCaps = Ti.Platform.displayCaps;
+ns.platformWidth = _displayCaps.platformWidth;
+ns.platformHeight = _displayCaps.platformHeight;
+
+// Pixel width assuming 320px dimension
+ns.x = function(p) {
+  var size = p;
+  var xe = 320;
+  var xp = _displayCaps.platformWidth;
+  if(ns.isAndroid() || xe != xp) {
+    var pct = (p/xe); // percentage of 320 width
+    return Math.floor(xp * pct);
+  }
+  //Ti.API.info('X size ' + p + ' to ' + size);
+  return size;
+}
+
+// Pixel height assuming 480px dimension
+ns.y = function(p) {
+  var size = p;
+  var ye = 480;
+  var yp = _displayCaps.platformHeight;
+  if(ns.isAndroid() || ye != yp) {
+    var pct = (p/ye); // percentage of 480 height
+    size = Math.floor(yp * pct);
+  }
+  //Ti.API.info('Y size ' + p + ' to ' + size);
+  return size;
+}
+
+// Ensure max length for field
+ns.ensureMaxLength = function(e) {
+  var maxlength = e.source.maxLength || 254;
+  if(e.value.length > maxlength) {
+    e.source.value = e.value.substr(0, maxlength);
+  }
+};
+
+// Window helper 
 ns.Window = function(_props) {
     // Merge with default props
     var o = cfg.extend('ui.Window', _props);
@@ -44,12 +83,56 @@ ns.TableGroup = function(_props) {
   return tbl;
 };
 
+// TableRowViw object
+ns.TableRow = function(/* [title,] options */) {
+  var rowLabel = false;
+  if (typeof arguments[0] === 'string') {
+    tin.log('Table Row Title: ' + arguments[0]);
+    var rowLabel = ns.LabelTableRowTitle(arguments[0]);
+    var o = cfg.extend('ui.TableRowTitle', arguments[1] || {});
+  } else {
+    var o = cfg.extend('ui.TableRowTitle', arguments[0]);
+  }
+  var row = Ti.UI.createTableViewRow(cfg.extend('ui.TableRow', o));
+  
+  if(rowLabel) {
+    row.add(rowLabel);
+  }
+  
+  // DEBUG
+  //tin.log(o);
+  
+  var borderTopColor = false;
+  if(borderTopColor = cfg.get('ui.TableRow.borderTopColor', false)) {
+    // Top border
+    var topBorder = Ti.UI.createView({
+      top: 0,
+      width: tin.platformWidth + 20, // Not sure why it has to be wider than the viewport here...
+      height: 1,
+      backgroundColor: borderTopColor
+    });
+    row.add(topBorder);
+  }
+
+  // Bottom border
+  var borderBottomColor = false;
+  if(borderBottomColor = cfg.get('ui.TableRow.borderBottomColor', false)) {
+    var bottomBorder = Ti.UI.createView({
+      bottom: 0,
+      width: tin.platformWidth + 20, // Not sure why it has to be wider than the viewport here...
+      height: 1,
+      backgroundColor: borderBottomColor
+    });
+    row.add(bottomBorder);
+  }
+
+  return row;    
+};
+
 // Button with a localized title
 ns.Button = function() {
   if (typeof arguments[0] === 'string') {
-    return Ti.UI.createButton(cfg.extend('ui.Button', {
-      title: L(arguments[0], arguments[0])
-    },arguments[1]||{}));
+    return Ti.UI.createButton(cfg.extend('ui.Button', { title: L(arguments[0], arguments[0]) }, arguments[1]||{}));
   } else {
     return Ti.UI.createButton(cfg.extend('ui.Button', arguments[0]));
   }
@@ -101,9 +184,7 @@ ns.MessageView = function(msg) {
 // Label helper
 ns.Label = function() {
   if (typeof arguments[0] === 'string') {
-    var o = cfg.extend('ui.Label', {
-      text: L(arguments[0], arguments[0])
-    }, arguments[1] || {});
+    var o = cfg.extend('ui.Label', { text: L(arguments[0], arguments[0]) }, arguments[1] || {});
   } else {
     var o = cfg.extend('ui.Label', arguments[0]);
   }
@@ -124,6 +205,10 @@ ns.LabelSmall = function(text, _props) {
   var lbl = ns.Label.apply(this, arguments);
   return tin.extend(lbl, cfg.extend('ui.LabelSmall', _props));
 };
+ns.LabelTableRowTitle = function(text, _props) {
+  var lbl = ns.Label.apply(this, arguments);
+  return tin.extend(lbl, cfg.extend('ui.LabelTableRowTitle', _props));
+}; 
 
 // WebView helper
 ns.WebView = function(_props) {

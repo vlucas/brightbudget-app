@@ -3,6 +3,11 @@ var ns = {};
 var cfg = {};
 var _ = require('/lib/underscore');
 
+// App
+cfg.app = {
+  title: 'Brightbudget'
+}
+
 // Font
 cfg.font = {
   fontFamily : "Helvetica Neue",
@@ -22,7 +27,11 @@ cfg.ui = {
   },
   LabelH2: {
     font: _.extend(cfg.font, {fontSize: 18, fontWeight: 'bold'})
-  }
+  },
+  
+  // Tables
+  Table: {},
+  TableRow: {}
 };
 
 // ===============================================

@@ -7,4 +7,16 @@ var api = require('/tin/api');
 Ti.UI.setBackgroundColor('#fff');
 
 // Start API App at API root 
-api.app('http://localhost/brightb.it/budgetapp/').open();
+api.App('http://localhost/brightb.it/budgetapp/');
+
+
+
+
+
+
+// Define specific item relation behaviors
+api.rel('budget', {
+  row: function(item) {
+    return item.name;
+  }
+});
