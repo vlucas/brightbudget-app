@@ -13,7 +13,7 @@ var navGroup = false;
 function _navOpen(win) {
   if(navGroup === false) {
     // Base tabgroup
-    navGroup = Ti.UI.iPhone.createNavigationGroup({ window: win });
+    navGroup = ui.NavigationGroup({ window: win });
     baseWin.add(navGroup);
     baseWin.open();
   } else {
@@ -49,12 +49,12 @@ ns.relOpt = function(rel, opt, def) {
 };
 
 // Main app screen (starting point from root API)
-ns.App = function(baseUrl, opts) {
+ns.App = function(title, baseUrl, opts) {
   var opts = opts || {};
   // Base window
   var win = ui.Window({
     layout: 'vertical',
-    title: opts.title || cfg.get('app.title')
+    title: title || cfg.get('app.title')
   });
   
   // Need to access ajax stuff
@@ -68,27 +68,36 @@ ns.App = function(baseUrl, opts) {
         var data = {};
       }
       
+      // Create table
+      var tblData = [];
+      
       // Look for links in response JSON
       if(data.hasOwnProperty('_links')) {
-        // Heading
-        var lblHead = ui.LabelH1('Links');
-        win.add(lblHead);
-        
         // Links
-        linksView = ns.listLinks(data._links);
-        win.add(linksView);
+        linkSection = ns.listLinks(data._links, {
+          tableSection: { 
+            headingTitle: L('Actions')
+          }
+        });
+        tblData.push(linkSection);
       }
       
       // List 'items' if present
       if(data.hasOwnProperty('items')) {
-        // Heading
-        var lblHead = ui.LabelH1('Items');
-        win.add(lblHead);
-        
         // Items
-        linksView = ns.listItems(data.items);
-        win.add(linksView);
+        itemSection = ns.listItems(data.items, {
+          tableSection: {
+            headingTitle: L('Items')
+          }
+        });
+        tblData.push(itemSection);
       }
+      
+      // Add table
+      var tbl = ui.TableGroup({
+        data: tblData
+      });
+      win.add(tbl);
     }
   });
   
@@ -97,73 +106,123 @@ ns.App = function(baseUrl, opts) {
   return win;
 };
 
-ns.listLinks = function(links) {
-  // Base view
-  var view = ui.View({
-    layout: 'horizontal'
-  });
+ns.listLinks = function(links, opts) {
+  var opts = opts || {};
   
-  // Buttons  
-  var btns = [];
+  // Links  
+  var rows = [];
   for(linkName in links) {
     var link = links[linkName];
     var linkTitle = _.isUndefined(link.title) ? tin.ucwords(linkName) : link.title;
-    
-    // Button
-    btns[linkName] = ui.Button(linkTitle, {
-      width: ui.platformWidth - 20,
-      _link: link
-    });
-    // Add click handler for button    
-    btns[linkName].addEventListener('click', function(e) {
-      tin.log('Clicked: ' + e.source.title + ' (' + e.source._link.href + ')');
-      
-      // If link method is 'GET'
-      if(_.isUndefined(e.source._link.method) || e.source._link.method.toUpperCase() === 'GET') {
-        ns.App(e.source._link.href);
-      }
-      
-      // @TODO DELETE method
-    });
-    
-    // Add to view
-    view.add(btns[linkName]);
+
+    if(opts.tableSection) {
+      // Table Row
+      rows.push(ui.TableRow(linkTitle, {
+        hasDetail: true,
+        _title: linkTitle,
+        _link: link
+      }));
+    } else {
+      // Button
+      rows[linkName] = ui.Button(linkTitle, {
+        width: ui.platformWidth - 20,
+        _link: link
+      });
+
+      // Add click handler for button    
+      rows[linkName].addEventListener('click', function(e) {
+        ns.linkClick(e.source._title, e.source._link);
+      });
+    }
   }
+
+  if(opts.tableSection) {
+    var view = ui.TableSection(opts.tableSection);
+    
+    // Add click handler for table row    
+    view.addEventListener('click', function(e) {
+      ns.linkClick(e.row._title, e.row._link);
+    });
+  } else {
+    // Base view
+    var view = ui.View({
+      layout: 'horizontal'
+    });
+  }
+  
+  _.each(rows, function(row) {
+    view.add(row);
+  });
   
   // Return view
   return view;
 };
 
 ns.listItems = function(links, opts) {
-  // Base view
-  var tbl = ui.Table();
+  var opts = opts || {};
   
+  // Create table rows
   var rows = [];
   for(i in links) {
     var link = links[i];
     var relRowHandler = ns.relOpt(link, 'row');
     var linkRow = relRowHandler ? relRowHandler(link) : '[Item]';
     
+    rowObj = {};
     if(typeof linkRow === 'string') {
-      rows[linkName] = ui.TableRow(linkRow, { height: 60 });
+      rowObj = ui.TableRow(linkRow);
+      rowObj._title = linkRow;
+      rowObj.hasChild = true;
     } else {
-      rows[linkName] = linkRow;
+      rowObj = linkRow; // @TODO Ensure custom rows have a '_title' property
     }
-    rows[linkName]._link = link;
+    
+    // Custom row properties
+    rowObj._link = link;
     
     // Add row to table
-    tbl.add(rows[linkName]);
+    rows.push(rowObj);
+  }
+  
+  if(opts.tableSection) {
+    var tbl = ui.TableSection(opts.tableSection);
+    _.each(rows, function(row) {
+      tbl.add(row);
+    });
+  } else {
+    var tbl = ui.Table({
+      data: rows
+    });
   }
   
   // Table row click event
   tbl.addEventListener('click', function(e) {
-    tin.log('Clicked: ' + e.source.title + ' (' + e.source._link.href + ')');
+    ns.itemClick(e.rowData._title, e.rowData._link);
   });
   
   // Return table
   return tbl;
 };
 
+// Action to take when clicking on a "_link" item
+ns.linkClick = function(title, link, opts) {
+  var opts = opts || {};
+  tin.log('Clicked: ' + title + ' (' + link.href + ')');
+
+  // If link method is 'GET'
+  if(_.isUndefined(link.method) || link.method.toUpperCase() === 'GET') {
+    ns.App(title, link.href);
+  }
+
+  // @TODO DELETE method
+};
+
+// Action to take when clicking on an "item" in a collection
+ns.itemClick = function(title, link, opts) {
+  var opts = opts || {};
+  tin.log('Clicked: ' + title + ' (' + link._links.self.href + ')');
+  
+};
 
 // ===============================================
 

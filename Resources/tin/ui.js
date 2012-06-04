@@ -69,12 +69,19 @@ ns.View = function(_props) {
   return Ti.UI.createButton(cfg.extend('ui.View', _props));
 };
 
-// Table object
-ns.Table = function(_props) {
-  return Ti.UI.createTableView(cfg.extend('ui.Table', _props));
+// Navigation Group object (currently iOS ONLY)
+ns.NavigationGroup = function(_props) {
+  var nav = Ti.UI.iPhone.createNavigationGroup(cfg.extend('ui.NavigationGroup', _props));
+  return nav;
 };
 
 // Table object
+ns.Table = function(_props) {
+  var tbl = Ti.UI.createTableView(cfg.extend('ui.Table', _props));
+  return tbl;
+};
+
+// Table object, 'GROUPED' style (with fallback to Table for non-iOS)
 ns.TableGroup = function(_props) {
   var tbl = Ti.UI.createTableView(cfg.extend('ui.TableGroup', _props));
   if(tin.isiOS()) {
@@ -83,24 +90,30 @@ ns.TableGroup = function(_props) {
   return tbl;
 };
 
+// Table Section to go within a table object
+ns.TableSection = function(_props) {
+  if (typeof arguments[0] === 'string') {
+    var o = cfg.extend('ui.TableSection', { headerTitle: L(arguments[0], arguments[0]) }, arguments[1] || {});
+  } else {
+    var o = cfg.extend('ui.TableSection', arguments[0]);
+  }
+  return Ti.UI.createTableViewSection(o);
+};
+
 // TableRowViw object
 ns.TableRow = function(/* [title,] options */) {
   var rowLabel = false;
   if (typeof arguments[0] === 'string') {
-    tin.log('Table Row Title: ' + arguments[0]);
     var rowLabel = ns.LabelTableRowTitle(arguments[0]);
-    var o = cfg.extend('ui.TableRowTitle', arguments[1] || {});
+    var o = arguments[1] || {};
   } else {
-    var o = cfg.extend('ui.TableRowTitle', arguments[0]);
+    var o = arguments[0];
   }
-  var row = Ti.UI.createTableViewRow(cfg.extend('ui.TableRow', o));
+  var row = Ti.UI.createTableViewRow(cfg.extend('ui.TableRow', { height: 40 }, o));
   
   if(rowLabel) {
     row.add(rowLabel);
   }
-  
-  // DEBUG
-  //tin.log(o);
   
   var borderTopColor = false;
   if(borderTopColor = cfg.get('ui.TableRow.borderTopColor', false)) {

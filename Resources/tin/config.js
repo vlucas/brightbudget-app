@@ -16,7 +16,11 @@ cfg.font = {
 
 // UI config
 cfg.ui = {
-  Window: {},
+  Window: {
+    backgroundImage: 'images/bg-hex-lightgray.png',
+    backgroundRepeat: true,
+    barColor: '#a6440f'
+  },
   Button: {},
   Label:{
     font: _.extend(cfg.font, {})
@@ -28,10 +32,22 @@ cfg.ui = {
   LabelH2: {
     font: _.extend(cfg.font, {fontSize: 18, fontWeight: 'bold'})
   },
+  LabelTableRowTitle: {
+    font: _.extend(cfg.font, {fontSize: 18, fontWeight: 'bold'})
+  },
   
   // Tables
-  Table: {},
-  TableRow: {}
+  Table: {
+    backgroundColor: '#fff',
+    separatorStyle: Ti.UI.iPhone.TableViewSeparatorStyle.NONE // iOS ONLY
+  },
+  TableGroup: {
+    backgroundImage: 'images/bg-hex-lightgray.png',
+    backgroundRepeat: true
+  },
+  TableRow: {
+    height: 45
+  }
 };
 
 // ===============================================
