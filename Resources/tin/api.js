@@ -9,6 +9,7 @@ var _ = require('/lib/underscore');
 
 // Open Window in NavigationGroup controller
 var baseWin = ui.Window({ title: cfg.get('app.title') });
+var currentWin;
 var navGroup = false;
 function _navOpen(win) {
   if(navGroup === false) {
@@ -56,6 +57,7 @@ ns.App = function(title, baseUrl, opts) {
     layout: 'vertical',
     title: title || cfg.get('app.title')
   });
+  currentWin = win;
   
   // Need to access ajax stuff
   tin.ajax({
@@ -98,6 +100,12 @@ ns.App = function(title, baseUrl, opts) {
         data: tblData
       });
       win.add(tbl);
+    },
+    error: function(xhr) {
+      var msg = xhr.status + ' Error';
+      alert(msg);
+      var msgView = ui.MessageView(msg);
+      win.add(msgView);
     }
   });
   
@@ -112,6 +120,11 @@ ns.listLinks = function(links, opts) {
   // Links  
   var rows = [];
   for(linkName in links) {
+    // Skip 'self' links (results in recursive navigation)
+    if(linkName === 'self') {
+      continue;
+    }
+    
     var link = links[linkName];
     var linkTitle = _.isUndefined(link.title) ? tin.ucwords(linkName) : link.title;
 
@@ -204,24 +217,352 @@ ns.listItems = function(links, opts) {
   return tbl;
 };
 
+// Main app screen (starting point from root API)
+ns.Form = function(title, link, opts) {
+  var opts = opts || {};
+  // Base window
+  var formWin = ui.Window({
+    layout: 'vertical',
+    title: title
+  });
+  currentWin = formWin;
+
+  var fields = link.parameters;
+  var evUpdate = 'tin.ui.listItems:update:' + title;
+
+  // Base view for fields
+  var formView = Ti.UI.createScrollView({
+    top : 15,
+    bottom : 15,
+    left : 15,
+    right : 15
+  });
+
+  // Add fields according to their definitions
+  var inputs = [];
+  var labels = [];
+  var fieldViews = [];
+
+  // Pickers
+  var pickerSlideIn = Ti.UI.createAnimation({
+    bottom : -43
+  });
+  var pickerSlideOut = Ti.UI.createAnimation({
+    bottom : -251
+  })
+
+  // How big is a text field?
+  var tTop = 0;
+  var maxWidth = 150;
+  var minWidth = 50;
+  var tHeight = 40;
+  var tWidth = maxWidth;
+  var keyboardType = Ti.UI.KEYBOARD_DEFAULT;
+
+  // Display options
+  var showField = true;
+  var showLabel = true;
+
+  var i = 0;
+  for(fieldName in fields) {
+    var field = fields[fieldName];
+
+    // Reset label and field display
+    showField = true;
+    showLabel = true;
+
+    // How long is text field?
+    tWidth = (parseInt(field.length) ? (parseInt(field.length) * 15) : maxWidth);
+    
+    // Max width
+    if(tWidth > maxWidth) {
+      tWidth = maxWidth;
+    }
+    // Min width
+    if(tWidth < minWidth) {
+      tWidth = minWidth;
+    }
+
+    switch(field.type) {
+      case "bool":
+      case "boolean":
+        // Handle custom display for field
+        showField = false;
+
+        // Add boolean switch
+        var fInput = Ti.UI.createSwitch({
+          top : tTop,
+          right : 0,
+          value : false
+        });
+        inputs.push(fInput);
+        formView.add(fInput);
+
+        break;
+
+      case "int":
+      case "integer":
+        keyboardType = Ti.UI.KEYBOARD_NUMBER_PAD;
+        break;
+
+      case "float":
+      case "double":
+      case "decimal":
+      case "number":
+        keyboardType = Ti.UI.KEYBOARD_NUMBERS_PUNCTUATION;
+        break;
+
+      case "email":
+        keyboardType = Ti.UI.KEYBOARD_EMAIL;
+        break;
+
+      case "url":
+        keyboardType = Ti.UI.KEYBOARD_URL;
+        break;
+
+      case "date":
+      case "datetime":
+        //alert("DateTime input type!");
+        // Date & time picker
+        showField = false;
+
+        // Add text input
+        var fInput = Ti.UI.createTextField({
+          top : tTop,
+          right : 0,
+          width : tWidth,
+          height : tHeight,
+          borderStyle : Ti.UI.INPUT_BORDERSTYLE_ROUNDED,
+          enabled : false
+        });
+        inputs.push(fInput);
+        formView.add(fInput);
+
+        // Add click event to show picker options
+        fInput.addEventListener('click', function(_e) {
+          // Blur to hide keyboard
+          fInput.blur();
+
+          // Setup Date object to current day at 6:00pm
+          var startDate = new Date();
+          startDate.setHours(18, 0, 0, 0);
+
+          // Show Datetime picker
+          ns.DatePickerModal({
+            defaultValue : startDate,
+            type : field.type,
+            done : function(date) {
+              // Set input value
+              fInput.value = date.format('yyyy-mm-dd HH:MM');
+              //date; // Date selection to string
+            }
+          });
+        });
+        break;
+
+      default:
+        keyboardType = Ti.UI.KEYBOARD_ASCII;
+        break;
+    }
+
+    // Check custom render callbacks
+    // Usage: Callbacks should return boolean false if they are NOT doing any custom rendering
+    if(opts.itemAddRenderLabel) {
+      // Don't show default label if callback returns anything but false
+      var rLabel = opts.itemAddRenderLabel(fieldName, field);
+      if(false !== rLabel) {
+        // Add elemenent to view
+        rLabel.top = tTop;
+        rLabel.left = 0;
+        rLabel.width = 150;
+        labels.push(fieldName);
+        formView.add(rLabel);
+
+        // Don't render default
+        showLabel = false;
+      }
+    }
+
+    if(showLabel) {
+      // Add text label
+      var fLabel = ui.LabelForm({
+        top : tTop,
+        left : 0,
+        width : 150,
+        height : 40,
+        text : tin.ucwords(fieldName)
+      });
+      labels.push(fieldName);
+      formView.add(fLabel);
+    }
+
+    // Check custom render callbacks
+    // Usage: Callbacks should return boolean false if they are NOT doing any custom rendering
+    if(opts.itemAddRenderField) {
+      // Don't show default field if callback returns anything but false
+      var rField = opts.itemAddRenderField(fieldName, field);
+      if(false !== rField) {
+        // Add elemenent to view
+        rField.top = tTop;
+        rField.right = 0;
+        inputs.push(rField);
+        formView.add(rField);
+
+        // Don't render default
+        showField = false;
+      }
+    }
+
+    if(showField) {
+      // Add text input
+      var fInput = Ti.UI.createTextField({
+        top : tTop,
+        right : 0,
+        width : tWidth,
+        height : tHeight,
+        borderStyle : Ti.UI.INPUT_BORDERSTYLE_ROUNDED,
+        keyboardType : keyboardType
+      });
+      inputs.push(fInput);
+      formView.add(fInput);
+    }
+
+    // Increment height as we go so fields don't overlap
+    tTop += tHeight + 10;
+    i++;
+  }
+
+  // Add submit button
+  var btnSubmit = ui.Button('Save', {top : tTop });
+  btnSubmit.addEventListener('click', function(e) {
+    // Assemble all data
+    var params = link.parameters || {};
+    // For URL hash comparison
+    var hashParams = JSON.stringify(params);
+    for(var i = 0; i < inputs.length; i++) {
+      params[labels[i]] = inputs[i].value;
+    }
+
+    // Handle add click to add new item
+    tin.ajax({
+      url : link.href,
+      method : link.method,
+      data : params,
+      success : function(xhr) {
+        // Success
+        try {
+          var data = JSON.parse(xhr.responseText);
+        } catch(e) {
+          var data = {};
+        }
+
+        // Fire success callback if set
+        if(opts.success) {
+          opts.success(data);
+        }
+
+        // Update table listing
+        var purl = link.method + link.href + hashParams;
+        Ti.API.fireEvent(evUpdate, {
+          url : purl
+        });
+
+        // Free memory
+        xhr = null;
+        data = null;
+        o = null;
+        action = null;
+        params = null;
+
+        // Close window
+        navGroup.close(formWin);
+      },
+      error : function(xhr) {
+        // Show errors
+        try {
+          var data = JSON.parse(xhr.responseText);
+        } catch(e) {
+          var data = {};
+        }
+
+        var err = "";
+        if(data.errors) {
+          for(field in data.errors) {
+            elen = data.errors[field].length;
+            for(var i = 0; i < elen; i++) {
+              err += data.errors[field][i] + "\n";
+            }
+          }
+        }
+        alert("Validation Errors:\n" + (err != "" ? err : "Unable to add new item"));
+        
+        // Fire callback if set
+        if(opts.error) {
+          opts.error(data);
+        }
+
+        // Free memory
+        xhr = null;
+        data = null;
+      }
+    });
+  });
+  formWin.add(formView);
+  formView.add(btnSubmit);
+  
+
+  // Add view and return window
+  _navOpen(formWin);
+  return formWin;
+};
+
 // Action to take when clicking on a "_link" item
 ns.linkClick = function(title, link, opts) {
   var opts = opts || {};
-  tin.log('Clicked: ' + title + ' (' + link.href + ')');
+  var method = link.method ? link.method.toUpperCase() : 'GET';
+  tin.log('Link Click: ' + title + ' (' + link.href + ')');
 
+  // Form parameters (JSONSchema style)
+  if(!_.isUndefined(link.parameters)) {
+    return ns.Form(title, link);
+  }
+  
   // If link method is 'GET'
-  if(_.isUndefined(link.method) || link.method.toUpperCase() === 'GET') {
-    ns.App(title, link.href);
+  if(method === 'GET') {
+    return ns.App(title, link.href);
   }
 
-  // @TODO DELETE method
+  // DELETE method
+  if(method === 'DELETE') {
+    tin.ajax({
+      url: link.href,
+      method: link.method,
+      success: function(xhr) {
+        navGroup.close(currentWin);
+        // @TODO Refresh app view so item row dissapears (or remove row manually)
+      },
+      error: function(xhr) {
+        alert('Unable to DELETE');
+      }
+    });
+  }
+  
+  // Just here to log items that don't do anything (no logic handling above)
+  tin.log('[Link Doing Nothing...]');
 };
 
 // Action to take when clicking on an "item" in a collection
-ns.itemClick = function(title, link, opts) {
+ns.itemClick = function(title, item, opts) {
   var opts = opts || {};
-  tin.log('Clicked: ' + title + ' (' + link._links.self.href + ')');
+  tin.log('Item Click: ' + title + ' (' + item._links.self.href + ')');
   
+  // If item has a 'self' defined
+  if(item._links && item._links.self && (_.isUndefined(item._links.self.method) || item._links.self.method.toUpperCase() === 'GET')) {
+    return ns.App(title, item._links.self.href);
+  }
+  
+  // Just here to log links that don't do anything (no logic handling above)
+  tin.log('[Item Doing Nothing...]');
 };
 
 // ===============================================

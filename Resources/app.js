@@ -1,6 +1,6 @@
 
 // Require Titanium Nitride (TiN)
-//var tin = require('/tin/lib');
+var tin = require('/tin/lib');
 var api = require('/tin/api');
 
 // Master background color
@@ -17,6 +17,12 @@ api.App('Brightbudget', 'http://localhost/brightb.it/budgetapp/');
 // Define specific item relation behaviors
 api.rel('budget', {
   row: function(item) {
-    return item.name;
+    return item.name + ' | ' + tin.round(item.balance, 2) + ' / ' + tin.round(item.amount, 2);
+  }
+});
+
+api.rel('transaction', {
+  row: function(item) {
+    return item.name + ' (' + tin.round(item.amount, 2) + ')';
   }
 });

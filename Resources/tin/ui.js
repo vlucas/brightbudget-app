@@ -162,10 +162,10 @@ ns.ImageView = function(img,args) {
 
 ns.MessageView = function(msg) {
   var viewMsg = Ti.UI.createView({
-    left : _x(30),
-    right : _x(30),
-    top : _y(80),
-    bottom : _y(80),
+    left : ns.x(30),
+    right : ns.x(30),
+    top : ns.y(80),
+    bottom : ns.y(80),
     backgroundColor : '#fff',
     borderRadius : 6,
     borderColor : '#333',
@@ -173,14 +173,14 @@ ns.MessageView = function(msg) {
     opacity : 0.8
   });
   var lblMsg = Ti.UI.createLabel({
-    left : _x(20),
-    right : _x(20),
-    top : _y(20),
-    bottom : _y(20),
+    left : ns.x(20),
+    right : ns.x(20),
+    top : ns.y(20),
+    bottom : ns.y(20),
     text : msg,
     color : '#222',
     font : {
-      fontSize : _y(16),
+      fontSize : ns.y(16),
       fontWeight : 'bold'
     },
     shadowColor : '#ddd',
@@ -218,6 +218,12 @@ ns.LabelSmall = function(text, _props) {
   var lbl = ns.Label.apply(this, arguments);
   return tin.extend(lbl, cfg.extend('ui.LabelSmall', _props));
 };
+// Label helper for Forms (text labels beside text)
+ns.LabelForm = function(text, _props) {
+  var lbl = ns.Label.apply(this, arguments);
+  return tin.extend(lbl, cfg.extend('ui.LabelForm', _props));
+};
+// Table row title
 ns.LabelTableRowTitle = function(text, _props) {
   var lbl = ns.Label.apply(this, arguments);
   return tin.extend(lbl, cfg.extend('ui.LabelTableRowTitle', _props));
