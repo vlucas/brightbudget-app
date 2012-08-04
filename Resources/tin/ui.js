@@ -14,8 +14,8 @@ ns.platformHeight = _displayCaps.platformHeight;
 ns.x = function(p) {
   var size = p;
   var xe = 320;
-  var xp = _displayCaps.platformWidth;
-  if(ns.isAndroid() || xe != xp) {
+  var xp = ns.platformWidth;
+  if(tin.isAndroid() || xe != xp) {
     var pct = (p/xe); // percentage of 320 width
     return Math.floor(xp * pct);
   }
@@ -27,8 +27,8 @@ ns.x = function(p) {
 ns.y = function(p) {
   var size = p;
   var ye = 480;
-  var yp = _displayCaps.platformHeight;
-  if(ns.isAndroid() || ye != yp) {
+  var yp = ns.platformHeight;
+  if(tin.isAndroid() || ye != yp) {
     var pct = (p/ye); // percentage of 480 height
     size = Math.floor(yp * pct);
   }
@@ -63,10 +63,14 @@ ns.Window = function(_props) {
 
   return win;
 };
+ns.WindowMenu = function(_props) {
+  var win = ns.Window.call(this, _props);
+  return tin.extend(win, cfg.extend('ui.WindowMenu', _props));
+};
 
 // View object
 ns.View = function(_props) {
-  return Ti.UI.createButton(cfg.extend('ui.View', _props));
+  return Ti.UI.createView(cfg.extend('ui.View', _props));
 };
 
 // Navigation Group object (currently iOS ONLY)
@@ -79,6 +83,10 @@ ns.NavigationGroup = function(_props) {
 ns.Table = function(_props) {
   var tbl = Ti.UI.createTableView(cfg.extend('ui.Table', _props));
   return tbl;
+};
+ns.TableMenu = function(_props) {
+  var tbl = ns.Table.apply(this, arguments);
+  return tin.extend(tbl, cfg.extend('ui.TableMenu', _props));
 };
 
 // Table object, 'GROUPED' style (with fallback to Table for non-iOS)
@@ -98,6 +106,10 @@ ns.TableSection = function(_props) {
     var o = cfg.extend('ui.TableSection', arguments[0]);
   }
   return Ti.UI.createTableViewSection(o);
+};
+ns.TableSectionMenu = function(_props) {
+  var tbl = ns.TableSection.apply(this, arguments);
+  return tin.extend(tbl, cfg.extend('ui.TableSectionMenu', _props));
 };
 
 // TableRowViw object
@@ -140,6 +152,10 @@ ns.TableRow = function(/* [title,] options */) {
   }
 
   return row;    
+};
+ns.TableRowMenu = function(_props) {
+  var row = ns.TableRow.apply(this, arguments);
+  return tin.extend(row, cfg.extend('ui.TableRowMenu', _props));
 };
 
 // Button with a localized title

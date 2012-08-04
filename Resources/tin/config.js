@@ -19,7 +19,13 @@ cfg.ui = {
   Window: {
     backgroundImage: 'images/bg-hex-lightgray.png',
     backgroundRepeat: true,
-    barColor: '#a6440f'
+    barColor: '#a6440f',
+    zIndex: 10 // To be above slide-out menu (which has a zINdex of '1')
+  },
+  WindowMenu: {
+    width: 220,
+    backgroundImage: 'images/bg-hex-gray.png',
+    backgroundRepeat: true  
   },
   Button: {},
   Label:{
@@ -39,7 +45,12 @@ cfg.ui = {
   // Tables
   Table: {
     backgroundColor: '#fff',
-    separatorStyle: Ti.UI.iPhone.TableViewSeparatorStyle.NONE // iOS ONLY
+    separatorStyle: Ti.UI.iPhone.TableViewSeparatorStyle.NONE // iOS ONLY @TODO Make Android compatible
+  },
+  TableMenu: {
+    backgroundImage: 'images/bg-hex-gray.png',
+    backgroundRepeat: true,
+    separatorStyle: null
   },
   TableGroup: {
     backgroundImage: 'images/bg-hex-lightgray.png',
@@ -47,6 +58,11 @@ cfg.ui = {
   },
   TableRow: {
     height: 45
+  },
+  TableRowMenu: {
+    height: 35,
+    backgroundColor: '#444',
+    color: '#eee'
   }
 };
 

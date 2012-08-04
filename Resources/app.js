@@ -6,11 +6,8 @@ var api = require('/tin/api');
 // Master background color
 Ti.UI.setBackgroundColor('#fff');
 
-// Start API App at API root 
-api.App('Brightbudget', 'http://localhost/brightb.it/budgetapp/');
-
-
-
+// Start API App at API root
+api.App('Brightbudget', 'http://budgetapp.dev');
 
 
 

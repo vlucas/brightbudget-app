@@ -9,18 +9,29 @@ var _ = require('/lib/underscore');
 
 // Open Window in NavigationGroup controller
 var baseWin = ui.Window({ title: cfg.get('app.title') });
-var currentWin;
+var currentWin = baseWin;
+var isFirstOpen = true;
 var navGroup = false;
 function _navOpen(win) {
   if(navGroup === false) {
-    // Base tabgroup
-    navGroup = ui.NavigationGroup({ window: win });
+    // Base navigation stack
+    navGroup = ui.NavigationGroup({ window: win }); // @TODO Make Android compatible
+    ns._getNavMenu();
     baseWin.add(navGroup);
     baseWin.open();
   } else {
     navGroup.open(win, { animated: true }); 
   }
 }
+
+// Set/get current active window
+ns.setCurrentWin = function(win) {
+  win.setZIndex(10); // Set above slide menu
+  currentWin = win;
+};
+ns.getCurrentWin = function(win) {
+  return currentWin;
+};
 
 // Relation handler options
 var _rels = [];
@@ -52,13 +63,14 @@ ns.relOpt = function(rel, opt, def) {
 // Main app screen (starting point from root API)
 ns.App = function(title, baseUrl, opts) {
   var opts = opts || {};
-  // Base window
+
+  // Setup new window
   var win = ui.Window({
     layout: 'vertical',
     title: title || cfg.get('app.title')
   });
-  currentWin = win;
-  
+  ns.setCurrentWin(win);
+
   // Need to access ajax stuff
   tin.ajax({
     url: baseUrl,
@@ -70,18 +82,26 @@ ns.App = function(title, baseUrl, opts) {
         var data = {};
       }
       
-      // Create table
+      // Table data holder
       var tblData = [];
       
       // Look for links in response JSON
       if(data.hasOwnProperty('_links')) {
-        // Links
-        linkSection = ns.listLinks(data._links, {
-          tableSection: { 
-            headingTitle: L('Actions')
-          }
-        });
-        tblData.push(linkSection);
+        if(isFirstOpen) {
+          ns.listMenuLinks(data._links, {
+            tableSection: { 
+              headingTitle: L('Actions')
+            }
+          });          
+        } else {
+          // Links
+          linkSection = ns.listLinks(data._links, {
+            tableSection: { 
+              headingTitle: L('Actions')
+            }
+          });
+          tblData.push(linkSection);
+        }
       }
       
       // List 'items' if present
@@ -100,6 +120,9 @@ ns.App = function(title, baseUrl, opts) {
         data: tblData
       });
       win.add(tbl);
+      
+      // No longer first open after this
+      isFirstOpen = false;
     },
     error: function(xhr) {
       var msg = xhr.status + ' Error';
@@ -217,6 +240,104 @@ ns.listItems = function(links, opts) {
   return tbl;
 };
 
+var _navMenuWin = ui.WindowMenu({
+  top:   0,
+  left:  0,
+  zIndex: 1
+});
+var _navMenuTable;
+var _navMenuShowing = false;
+// animations
+var _navAnimateIn = Ti.UI.createAnimation({
+    left: _navMenuWin.getWidth(),
+    curve: Ti.UI.ANIMATION_CURVE_EASE_OUT,
+    duration: 400
+});
+var _navAnimateOut = Ti.UI.createAnimation({
+    left: 0,
+    curve: Ti.UI.ANIMATION_CURVE_EASE_OUT,
+    duration: 400
+});
+ns._getNavMenu = function() {
+  // Setup for first open
+  if(isFirstOpen) {
+    // Facebook-like menu window
+    _navMenuTable = ui.TableMenu();
+    _navMenuWin.add(_navMenuTable);
+  
+    // Add button to base window to open menu
+    var btnMenuToggle = Ti.UI.createButton({
+        image: 'images/icons/259-list-white.png'
+    });
+    ns.getCurrentWin().setLeftNavButton(btnMenuToggle);
+    btnMenuToggle.addEventListener('click', function(e) {
+      ns.navMenuToggle();
+    });
+    
+    _navMenuWin.open();
+  }
+  
+  return _navMenuWin;
+};
+
+ns.navMenuToggle = function() {
+  if( !_navMenuShowing ){
+    baseWin.animate(_navAnimateIn);
+    _navMenuShowing = true;
+  } else {
+    baseWin.animate(_navAnimateOut);
+    _navMenuShowing = false;
+  }
+}
+    
+ns.listMenuLinks = function(links, opts) {
+  var opts = opts || {};
+  
+  ns._getNavMenu();
+  
+  // Links  
+  var rows = [];
+  for(linkName in links) {
+    // Skip 'self' links (results in recursive navigation)
+    if(linkName === 'self') {
+      continue;
+    }
+    
+    var link = links[linkName];
+    var linkTitle = _.isUndefined(link.title) ? tin.ucwords(linkName) : link.title;
+
+    // Table Row
+    rows.push(ui.TableRowMenu(linkTitle, {
+      hasChild: true,
+      _title: linkTitle,
+      _link: link
+    }));
+  }
+
+  if(opts.tableSection) {
+    var section = ui.TableSectionMenu(opts.tableSection);
+    _.each(rows, function(row) {
+      section.add(row);
+    });
+    
+    _navMenuTable.setData([section]);
+    
+    // Table section click event
+    section.addEventListener('click', function(e) {
+      ns.linkClick(e.rowData._title, e.rowData._link);
+    });
+  } else {
+    _navMenuTable.setData(rows);
+    
+    // Table row click event
+    _navMenuTable.addEventListener('click', function(e) {
+      ns.linkClick(e.rowData._title, e.rowData._link);
+    });
+  }
+  
+  return true;
+};
+
 // Main app screen (starting point from root API)
 ns.Form = function(title, link, opts) {
   var opts = opts || {};
@@ -225,7 +346,7 @@ ns.Form = function(title, link, opts) {
     layout: 'vertical',
     title: title
   });
-  currentWin = formWin;
+  ns.setCurrentWin(formWin);
 
   var fields = link.parameters;
   var evUpdate = 'tin.ui.listItems:update:' + title;
@@ -519,8 +640,14 @@ ns.Form = function(title, link, opts) {
 // Action to take when clicking on a "_link" item
 ns.linkClick = function(title, link, opts) {
   var opts = opts || {};
-  var method = link.method ? link.method.toUpperCase() : 'GET';
+  tin.log(arguments);
+  var method = _.isUndefined(link.method) ? 'GET' : link.method.toUpperCase();
   tin.log('Link Click: ' + title + ' (' + link.href + ')');
+  
+  // Hide nav menu if showing
+  if(_navMenuShowing) {
+    ns.navMenuToggle();
+  }
 
   // Form parameters (JSONSchema style)
   if(!_.isUndefined(link.parameters)) {
@@ -554,7 +681,8 @@ ns.linkClick = function(title, link, opts) {
 // Action to take when clicking on an "item" in a collection
 ns.itemClick = function(title, item, opts) {
   var opts = opts || {};
-  tin.log('Item Click: ' + title + ' (' + item._links.self.href + ')');
+  //tin.log('Item Click: ' + title + ' (' + item._links.self.href + ')');
+  tin.log(item);
   
   // If item has a 'self' defined
   if(item._links && item._links.self && (_.isUndefined(item._links.self.method) || item._links.self.method.toUpperCase() === 'GET')) {
