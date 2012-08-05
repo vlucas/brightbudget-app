@@ -24,6 +24,9 @@ function _navOpen(win) {
   }
 }
 
+// Stored variables
+ns.vars = {};
+
 // Set/get current active window
 ns.setCurrentWin = function(win) {
   win.setZIndex(10); // Set above slide menu
@@ -640,7 +643,6 @@ ns.Form = function(title, link, opts) {
 // Action to take when clicking on a "_link" item
 ns.linkClick = function(title, link, opts) {
   var opts = opts || {};
-  tin.log(arguments);
   var method = _.isUndefined(link.method) ? 'GET' : link.method.toUpperCase();
   tin.log('Link Click: ' + title + ' (' + link.href + ')');
   
